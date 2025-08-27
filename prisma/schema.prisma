@@ -13,10 +13,20 @@ model User {
   email        String    @unique
   passwordHash String    @map("password_hash")
   role         Role
+  phone        String?
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  ticketsCreated Ticket[]   @relation("CreatedTickets")
-  ticketsAssigned Ticket[]  @relation("AssignedTickets")
+  // ✅ New optional fields
+  firstName    String?
+  lastName     String?
+  bio          String?
+  facebook     String?
+  twitter      String?
+  linkedin     String?
+  instagram    String?
+
+  ticketsCreated  Ticket[]   @relation("CreatedTickets")
+  ticketsAssigned Ticket[]   @relation("AssignedTickets")
   comments        Comment[]
   attachments     Attachment[]
   activityLogs    ActivityLog[]
