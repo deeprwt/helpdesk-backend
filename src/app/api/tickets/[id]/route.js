@@ -1,35 +1,28 @@
-import prisma from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
 
-// GET Ticket by ID
+const prisma = new PrismaClient();
+
 export async function GET(req, { params }) {
-  const { id } = params;
   try {
-    const ticket = await prisma.ticket.findUnique({
+    const { id } = params;
+
+    const attachment = await prisma.attachment.findUnique({
       where: { id },
-      include: {
-        createdBy: true,
-        assignedTo: true,
-        comments: { include: { user: true } },
+    });
+
+    if (!attachment) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+
+    return new Response(attachment.data, {
+      headers: {
+        "Content-Type": attachment.mimetype,
+        "Content-Disposition": `attachment; filename="${attachment.filename}"`,
       },
     });
-    if (!ticket) return new Response("Not Found", { status: 404 });
-    return new Response(JSON.stringify(ticket), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-}
-
-// UPDATE Ticket (status, assignment, etc.)
-export async function PATCH(req, { params }) {
-  const { id } = params;
-  try {
-    const body = await req.json();
-    const ticket = await prisma.ticket.update({
-      where: { id },
-      data: body,
-    });
-    return new Response(JSON.stringify(ticket), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (err) {
+    console.error("Download error:", err);
+    return NextResponse.json({ error: "Failed to download file" }, { status: 500 });
   }
 }

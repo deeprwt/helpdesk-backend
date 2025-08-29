@@ -8,25 +8,25 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
   role         Role
   phone        String?
-  createdAt    DateTime  @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   // ✅ New optional fields
-  firstName    String?
-  lastName     String?
-  bio          String?
-  facebook     String?
-  twitter      String?
-  linkedin     String?
-  instagram    String?
+  firstName String?
+  lastName  String?
+  bio       String?
+  facebook  String?
+  twitter   String?
+  linkedin  String?
+  instagram String?
 
-  ticketsCreated  Ticket[]   @relation("CreatedTickets")
-  ticketsAssigned Ticket[]   @relation("AssignedTickets")
+  ticketsCreated  Ticket[]      @relation("CreatedTickets")
+  ticketsAssigned Ticket[]      @relation("AssignedTickets")
   comments        Comment[]
   attachments     Attachment[]
   activityLogs    ActivityLog[]
@@ -41,17 +41,55 @@ model Ticket {
   building    String?
   cluster     String?
   createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @default(now()) @map("updated_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  createdBy User @relation("CreatedTickets", fields: [createdById], references: [id])
+  // SLA-related fields
+  firstResponseAt DateTime? @map("first_response_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  dueResponseAt   DateTime? @map("due_response_at")
+  dueResolutionAt DateTime? @map("due_resolution_at")
+  slaBreached     Boolean   @default(false) @map("sla_breached")
+
+  // User info (FK + snapshot fields)
+  createdBy   User   @relation("CreatedTickets", fields: [createdById], references: [id])
   createdById String
+  createdByName  String    // 👈 store user name
+  createdByEmail String    // 👈 store user email
 
-  assignedTo User? @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  assignedTo   User?   @relation("AssignedTickets", fields: [assignedToId], references: [id])
   assignedToId String?
 
-  comments    Comment[]
-  attachments Attachment[]
+  comments     Comment[]
+  attachments  Attachment[]
   activityLogs ActivityLog[]
+
+  // SLA Policy
+  slaPolicy   SLAPolicy? @relation(fields: [slaPolicyId], references: [id])
+  slaPolicyId String?
+
+  // Events
+  events TicketEvent[]
+}
+
+model SLAPolicy {
+  id                 String   @id @default(uuid())
+  name               String
+  priority           Priority
+  responseTimeMins   Int
+  resolutionTimeMins Int
+  businessHours      Boolean  @default(true)
+
+  tickets Ticket[]
+}
+
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  String
+  type      String // e.g. "CREATED", "EMAIL_SENT", "SLA_BREACH"
+  message   String?
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
 }
 
 model Comment {
@@ -62,19 +100,19 @@ model Comment {
   ticket   Ticket @relation(fields: [ticketId], references: [id])
   ticketId String
 
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
   userId String
 }
 
 model Attachment {
-  id        String   @id @default(uuid())
-  fileUrl   String   @map("file_url")
+  id         String   @id @default(uuid())
+  fileUrl    String   @map("file_url")
   uploadedAt DateTime @default(now()) @map("uploaded_at")
 
   ticket   Ticket @relation(fields: [ticketId], references: [id])
   ticketId String
 
-  uploadedBy User @relation(fields: [uploadedById], references: [id])
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
   uploadedById String
 }
 
@@ -86,7 +124,7 @@ model ActivityLog {
   ticket   Ticket @relation(fields: [ticketId], references: [id])
   ticketId String
 
-  performedBy User @relation(fields: [performedById], references: [id])
+  performedBy   User   @relation(fields: [performedById], references: [id])
   performedById String
 }
 
